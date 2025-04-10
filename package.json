@@ -1,0 +1,22 @@
+{
+    "name": "fsm-state-manager",
+    "version": "1.0.4",
+    "description": "A state transition manager using a finite state machine pattern",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "scripts": {
+      "build": "tsc",
+      "prepublishOnly": "npm run build"
+    },
+    "keywords": [
+      "state-machine",
+      "fsm",
+      "state-transition"
+    ],
+    "author": "Ваше ім'я",
+    "license": "MIT",
+    "devDependencies": {
+      "typescript": "^4.0.0"
+    }
+  }
+  
