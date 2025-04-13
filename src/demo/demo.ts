@@ -34,9 +34,7 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
             payload?.appliedData
               ? { state: 'loaded', appliedData: payload.appliedData }
               : data,
-        guard: (state, event, {}) => {
-                return false;
-            }
+        guard: () => doSomething(),
       },
       failure: {
         action: (data: any, payload: any) =>
@@ -63,11 +61,16 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
   };
 
+const doSomething = () => { return true }
+
 const fsm = new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
 
 fsm.setStateData({ state: 'init', appliedData: [] });
 
 fsm.transition('fetch');
-fsm.transition('failure', ['data1', 'data2']);
-fsm.transition('retry');
-fsm.transition('success', ['data3']);
+
+fsm.transition('success', ['data1', 'data2']);
+
+console.log(fsm.canTransition('failure')); // true
+
+console.log(fsm.getStateData().appliedData); // { state: 'loading', appliedData: [] }

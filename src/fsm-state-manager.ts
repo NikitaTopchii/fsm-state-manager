@@ -35,10 +35,10 @@ export class StateManagerFSM<Config extends FSMConfigI> {
 
         if(transition){
             if(!this.checkGuard(event)){                
-                console.warn(`[FSM] Guard activated on event '${event}' for state '${stateData.state}'`);
+                console.warn(`[FSM Warn] Guard activated on event '${event}' for state '${stateData.state}'`);
             } else {
                 if (this.options.devMode && !transition) {
-                    console.warn(`[FSM] Wrong transition: event '${event}' for state '${stateData.state}'`);
+                    console.warn(`[FSM Warn] Wrong transition: event '${event}' for state '${stateData.state}'`);
                 }
         
                 if (typeof transition.action === 'function') {
@@ -50,12 +50,24 @@ export class StateManagerFSM<Config extends FSMConfigI> {
                 }
             }
         } else {
-            return;
+            if (this.options.devMode && !transition) {
+                console.warn(`[FSM Warn] Wrong transition: event '${event}' for state '${stateData.state}'`);
+            }
         }
     }
 
     public canTransition(event: Config['event']): boolean {
-        return typeof this.transitionAction(event) === 'function';
+        const transition = this.transitionAction(event);
+
+        if(!transition){
+            if (this.options.devMode) {
+                console.warn(`[FSM Warn] We can't transition to another state with event '${event}' from state '${this.stateData.state}'`);
+            }
+
+            return false;
+        }
+
+        return typeof transition.action === 'function';
     }
 
     private transitionAction(event: Config['event']): TransitionRule<Config> | undefined {
@@ -74,7 +86,7 @@ export class StateManagerFSM<Config extends FSMConfigI> {
             return true;
         } else {
             return transition.guard 
-                ? transition.guard(this.stateData.state, event, '') 
+                ? transition.guard(this.stateData.state, event) 
                 : true;
         }
     }
