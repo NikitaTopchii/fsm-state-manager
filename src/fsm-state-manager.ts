@@ -1,4 +1,3 @@
-import Config from "chart.js/dist/core/core.config";
 import FSMConfigI from "./interfaces/fsm-config.i";
 import StateDataI from "./interfaces/state-data.i";
 import TransitionRule from "./types/transition-rule-type";
@@ -7,15 +6,14 @@ import TransitionRulesType from "./types/transition-rules-type";
 interface FSMOptions {
     devMode?: boolean;
     logTransitions?: boolean;
-    asyncMode?: boolean;
 }
 
 export class StateManagerFSM<Config extends FSMConfigI> {
     private stateData: StateDataI<Config> = { state: '' as Config['state'], appliedData: [] };
     private transitionRules: TransitionRulesType<Config>;
-    private options: FSMOptions;
+    private options: FSMOptions = { devMode: false, logTransitions: false, };
 
-    constructor(transitionRules: TransitionRulesType<Config>, options: FSMOptions = {}){
+    constructor(transitionRules: TransitionRulesType<Config>, options: Partial<FSMOptions> = {}){
         this.transitionRules = transitionRules;
         this.options = options;
     }

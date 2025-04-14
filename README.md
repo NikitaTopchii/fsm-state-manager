@@ -11,18 +11,21 @@
 - [What is an Event](#what-is-an-event)
 - [What is a Transition](#what-is-a-transition)
 - [What are Transition Rules](#what-are-transition-rules)
+- [What is FSM Config](#what-is-fsm-config)
+- [What is Transition Guard](#what-is-transition-guard)
+- [What are Options](#what-are-options)
 - [Example of Transition Rules for HTTP Requests](#example-of-transition-rules-for-http-requests)
 
 ---
 
 ## 🧠 What is a State
 
-A **state** in this implementation represents a distinct condition of a system at a particular moment. It is typically modeled using a union of string literals or enums.
+In this implementation, a **state** represents the current phase of an action the user is performing. This could be processing an HTTP request or the status of a filter the user has opened.
 
 ### Example:
 
 ```ts
-type DataStateType = 'init' | 'loading' | 'loaded' | 'error';
+type HttpRequestStateType = 'init' | 'loading' | 'loaded' | 'error';
 
 const initialState = {
   state: 'init',
@@ -36,12 +39,15 @@ Each state describes a phase of your application logic — e.g., "loading" durin
 
 ## ⚡ What is an Event
 
-An **event** is an external or internal trigger that causes a state transition. It represents an transitionAction that may change the state of the application.
+An **event** is an action that triggers a state change.
+Thanks to events, we can precisely control **transitions** between states via defined transition rules.
+
+For example, consider an HTTP request. The initial state before the user clicks a button might be init. When the user clicks the button, an event like fetch is triggered, transitioning to the loading state — because from init, we can only go to loading. Then from loading, we can go to either loaded or error, depending on the outcome (success or failure events).
 
 ### Example:
 
 ```ts
-type DataEventType = 'fetch' | 'success' | 'failure' | 'retry';
+type HttpRequestEventType = 'fetch' | 'success' | 'failure' | 'retry';
 ```
 
 Events are mapped to states, and when fired, they initiate a transition based on defined rules.
@@ -50,28 +56,135 @@ Events are mapped to states, and when fired, they initiate a transition based on
 
 ## 🔁 What is a Transition
 
-A **transition** is the result of applying an event to the current state using a defined rule. It’s a function that receives the current state and (optionally) data, and returns a new state.
+**Transitions** define how we move from one state to another, triggered by events.
+Transitions are controlled by a transition function. For better type safety and consistency, it’s recommended to define a reusable type for them.
+
+The function takes two arguments: the **current state** (including any data), and an **optional payload** used to shape the next state.
 
 ### Transition Function Signature
 
 ```ts
-(currentState: IStateData<Config>, payload?: { appliedData?: Config['data'][] }) => IStateData<Config>;
+type TransitionBaseStateFn<Config extends FSMConfigI> = (
+    data: StateDataI<Config>,
+    payload?: { appliedData?: Config['data'] } 
+  ) => StateDataI<Config>;
 ```
 
 ---
 
 ## 🧾 What are Transition Rules
 
-**Transition rules** define how the state machine behaves when an event occurs in a given state. Each rule is a function that describes how to move from one state to another.
-
-The rules are defined per state and per event. If an event is triggered while in a specific state and a rule for it exists — it will be executed.
+**Transition rules** define how the state machine should **transition** between states when specific events occur.
+If an event happens in a certain state and there's a matching transition rule for it, the rule is executed.
 
 ### Type Definition
 
 ```ts
-type TransitionRulesType<Config extends FSMConfig> = {
-  [State in Config['state']]: Partial<Record<Config['event'], TransitionFunction<Config>>>;
+type TransitionRulesType<Config extends FSMConfigI> = {
+  [State in Config['state']]: Partial<Record<Config['event'], TransitionRule<Config>>>;
 };
+```
+
+---
+
+## 🧾 What is FSM Config
+
+**FSMConfig** is the interface that defines the configuration for a particular implementation of the state manager. For instance, a state manager for HTTP requests will have a different config than one managing filter state.
+
+### Type Definition
+
+```ts
+interface HttpRequestFSMConfigI extends FSMConfigI{
+    state: HttpRequestStateType,
+    event: HttpRequestEventType,
+    rule: TransitionHttpRequestStateFn<HttpRequestFSMConfigI>, 
+    data: any // data type coming from the backend
+}
+
+export default HttpRequestFSMConfigI;
+```
+
+---
+
+## 🧾 What is Transition Guard
+
+A **TransitionGuard** is a function that prevents a state change based on some condition.
+It’s useful for scenarios like preventing unauthenticated users from transitioning or validating a state or event before a transition occurs.
+
+### Type Definition
+
+```ts
+type TransitionGuardFn<Config extends FSMConfigI> = (
+    currentState?: Config['state'],
+    event?: Config['event'],
+) => boolean;
+```
+
+### Use Case
+
+```ts
+success: {
+  transitionAction: (data: any, payload: any) =>
+    payload?.appliedData
+      ? { state: 'loaded', appliedData: payload.appliedData }
+      : data,
+  transitionGuard: () => doSomething(), // some function returning a boolean
+}
+```
+
+---
+
+## 🧾 What are Options
+
+**Options** are additional settings that can be optionally passed when creating a state manager instance.
+They allow enabling devMode or logging transitions. By default, both are set to false.
+
+### Definition
+
+```ts
+new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
+```
+
+---
+
+## What is transition
+
+The **transition** method is the core feature that performs state changes based on transition rules.
+It does several safety checks and ensures the transition is valid. When devMode or logTransitions are enabled, it also logs state transitions to the console.
+
+### Definition
+
+```ts
+stateManager.transition('fetch');
+
+stateManager.transition('success', ['data1', 'data2']);
+```
+
+---
+
+## What is canTransition
+
+**canTransition** is a public method that checks if a transition from the current state is possible using a specific event.
+
+### Definition
+
+```ts
+stateManager.canTransition('failure');
+```
+
+---
+
+## What are setStateData and getStateData
+
+**setStateData** is a setter method for initializing or overriding the current state.
+**getStateData** is a getter method to retrieve the current state data.
+
+### Definition
+
+```ts
+stateManager.setStateData({ state: 'init', appliedData: [] });
+
+stateManager.getStateData(); // { state: 'init', appliedData: [] }
 ```
 
 ---
@@ -81,90 +194,91 @@ type TransitionRulesType<Config extends FSMConfig> = {
 Here’s a complete example that demonstrates how you could define transition rules for managing the lifecycle of an HTTP request:
 
 ```ts
-const dataTransitionRules: TransitionRulesType<DataFSMConfig> = {
+const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
   init: {
-    fetch: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
+    fetch: {
+      transitionAction: () => ({
+        state: 'loading',
+        appliedData: [],
+      }),
+    },
   },
   loading: {
-    success: (data, payload) =>
-      payload?.appliedData
-        ? { state: 'loaded', appliedData: payload.appliedData }
-        : data,
-    failure: (data, payload) =>
-      payload?.appliedData
-        ? { state: 'error', appliedData: payload.appliedData }
-        : data,
+    success: {
+      transitionAction: (data: any, payload: any) =>
+        payload?.appliedData
+          ? { state: 'loaded', appliedData: payload.appliedData }
+          : data,
+      transitionGuard: () => doSomething(),
+    },
+    failure: {
+      transitionAction: (data: any, payload: any) =>
+        payload?.appliedData
+          ? { state: 'error', appliedData: payload.appliedData }
+          : data,
+    },
   },
   loaded: {
-    fetch: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
+    fetch: {
+      transitionAction: () => ({
+        state: 'loading',
+        appliedData: [],
+      }),
+    },
   },
   error: {
-    retry: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
-    fetch: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
+    retry: {
+      transitionAction: () => ({
+        state: 'loading',
+        appliedData: [],
+      }),
+    },
   },
 };
 ```
 
-Each function in the rule returns a new state or reuses the current one. This makes the state machine predictable, easy to test, and highly reusable.
+Each transition function returns either a new state or the current one (if unchanged).
+This makes the state machine predictable, easy to test, and highly reusable.
 
 ---
 
-Example of Facade for StateManager 
+## Use case 
 
 ```ts
-@Injectable({
-  providedIn: 'root'
-})
-export class DataStateManagerService {
-  private loadStates = new Map<string, IStateData<DataFSMConfig>>();
+type HttpRequestStateType = 'init' | 'loading' | 'loaded' | 'error';
 
-  private stateTransitionManager: StateTransitionManager<DataFSMConfig>;
+type HttpRequestEventType = 'fetch' | 'success' | 'failure' | 'retry';
 
-  constructor() {
-    this.stateTransitionManager = new StateTransitionManager<DataFSMConfig>(dataTransitionRules);
+type TransitionHttpRequestStateFn<Config extends HttpRequestFSMConfigI> = (
+  data: Config['data'],
+  payload?: { appliedData?: Config['data'] }
+) => Config['data'];
 
-    this.initStates();
-  }
-
-  private initStates(): void {
-    this.loadStates.set('universal_filters', { state: 'init', appliedData: [] });
-  }
-
-  public changeLoadState(key: string, event: DataEventType, stateDataPayload?: UniversalFilters[]): void {
-    const currentState = this.loadStates.get(key);
-
-    if (!currentState) {
-      return;
-    }
-
-    this.stateTransitionManager.setStateData(currentState);
-
-    this.stateTransitionManager.transition(event, stateDataPayload);
-
-    this.loadStates.set(key, this.stateTransitionManager.getState());
-  }
-
-  public getLoadState(key: string): IStateData<DataFSMConfig> | undefined {
-    return this.loadStates.get(key);
-  }
-
-  public getLoadedData(filterKey: string): UniversalFilters[] {
-    return this.loadStates.get(filterKey)!.appliedData;
-  }
+interface HttpRequestFSMConfigI extends FSMConfigI {
+  state: HttpRequestStateType,
+  event: HttpRequestEventType,
+  rule: TransitionHttpRequestStateFn<HttpRequestFSMConfigI>,
+  data: any
 }
+
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
+
+stateManager.setStateData({ state: 'init', appliedData: [] });
+
+stateManager.transition('fetch'); 
+// [FSM] Transition: 'init' state → 'loading' state triggered by 'fetch' event
+
+stateManager.transition('success', ['data1', 'data2']); 
+// [FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
+
+console.log(stateManager.canTransition('failure')); 
+// [FSM Warn] We can't transition to another state with event 'failure' from state 'loaded' → false
+
+console.log(stateManager.getStateData().appliedData); 
+// ['data1', 'dota2']
 ```
+
+---
 
 ## 🧠 Що таке стейт 
 

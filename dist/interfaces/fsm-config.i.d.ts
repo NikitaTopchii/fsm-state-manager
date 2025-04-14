@@ -1,7 +1,7 @@
 interface FSMConfigI {
     state: string;
     event: string;
-    rule: any;
+    transitionFn: any;
     data: any;
 }
 export default FSMConfigI;

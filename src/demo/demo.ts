@@ -62,7 +62,7 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
 
 const doSomething = () => { return true }
 
-const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules);
 
 stateManager.setStateData({ state: 'init', appliedData: [] });
 
