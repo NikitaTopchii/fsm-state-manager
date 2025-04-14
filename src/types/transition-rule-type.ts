@@ -1,9 +1,9 @@
 import FSMConfigI from "../interfaces/fsm-config.i";
-import GuardFn from "./guard-type";
+import TransitionGuardFn from "./guard-type";
 
 type TransitionRule<Config extends FSMConfigI> = {
-    action: Config['transitionFn'];
-    guard?: GuardFn<Config>;
+    transitionAction: Config['transitionFn'];
+    transitionGuard?: TransitionGuardFn<Config>;
 }
 
 export default TransitionRule;

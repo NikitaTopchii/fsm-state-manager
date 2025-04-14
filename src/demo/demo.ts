@@ -4,7 +4,6 @@ import TransitionRulesType from "../types/transition-rules-type";
 
 type HttpRequestStateType = 'init' | 'loading' | 'loaded' | 'error';
 
-
 type HttpRequestEventType = 'fetch' | 'success' | 'failure' | 'retry';
 
 type TransitionHttpRequestStateFn<Config extends HttpRequestFSMConfigI> = (
@@ -16,13 +15,13 @@ interface HttpRequestFSMConfigI extends FSMConfigI{
     state: HttpRequestStateType,
     event: HttpRequestEventType,
     rule: TransitionHttpRequestStateFn<HttpRequestFSMConfigI>, 
-    data: any // тип даних які ловимо з бекенду 
+    data: any
 }
 
 const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     init: {
       fetch: {
-        action: () => ({
+        transitionAction: () => ({
             state: 'loading',
             appliedData: [],
         })
@@ -30,14 +29,14 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
     loading: {
       success: {
-        action: (data: any, payload: any) =>
+        transitionAction: (data: any, payload: any) =>
             payload?.appliedData
               ? { state: 'loaded', appliedData: payload.appliedData }
               : data,
-        guard: () => doSomething(),
+        transitionGuard: () => doSomething(),
       },
       failure: {
-        action: (data: any, payload: any) =>
+        transitionAction: (data: any, payload: any) =>
             payload?.appliedData
               ? { state: 'error', appliedData: payload.appliedData }
               : data,
@@ -45,7 +44,7 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
     loaded: {
       fetch: {
-        action: () => ({
+        transitionAction: () => ({
             state: 'loading',
             appliedData: [],
           }),
@@ -53,7 +52,7 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
     error: {
       retry: {
-        action: () => ({
+        transitionAction: () => ({
             state: 'loading',
             appliedData: [],
           }),
@@ -63,14 +62,14 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
 
 const doSomething = () => { return true }
 
-const fsm = new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
 
-fsm.setStateData({ state: 'init', appliedData: [] });
+stateManager.setStateData({ state: 'init', appliedData: [] });
 
-fsm.transition('fetch');
+stateManager.transition('fetch'); //[FSM] Transition: 'init' state → 'loading' state triggered by 'fetch' event
 
-fsm.transition('success', ['data1', 'data2']);
+stateManager.transition('success', ['data1', 'data2']); //[FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
 
-console.log(fsm.canTransition('failure')); // true
+console.log(stateManager.canTransition('failure')); //[FSM Warn] We can't transition to another state with event 'failure' from state 'loaded' (false in console.log)
 
-console.log(fsm.getStateData().appliedData); // { state: 'loading', appliedData: [] }
+console.log(stateManager.getStateData().appliedData); // ['data1, 'data2']

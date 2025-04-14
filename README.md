@@ -36,7 +36,7 @@ Each state describes a phase of your application logic — e.g., "loading" durin
 
 ## ⚡ What is an Event
 
-An **event** is an external or internal trigger that causes a state transition. It represents an action that may change the state of the application.
+An **event** is an external or internal trigger that causes a state transition. It represents an transitionAction that may change the state of the application.
 
 ### Example:
 
@@ -200,7 +200,7 @@ type HttpRequestEventType = 'fetch' | 'success' | 'failure' | 'retry';
 
 ---
 
-## 🔁 What is a Transition
+## 🔁 Що таке переходи
 
 **Transitions** це як зрозуміло з назви процес переходу з одного стейту в інший враховуючи дію яка відбулась. 
 Для переходів треба використовувати **функцію переходу**, під яку бажано використовувати окремий тип для більшої консистентності даних.
@@ -228,7 +228,7 @@ export default TransitionBaseStateFn;
 
 ```ts
 type TransitionRulesType<Config extends FSMConfigI> = {
-  [State in Config['state']]: Partial<Record<Config['event'], Config['rule']>>;
+  [State in Config['state']]: Partial<Record<Config['event'], TransitionRule<Config>>>;
 };
 ```
 
@@ -253,49 +253,211 @@ export default HttpRequestFSMConfigI;
 
 ---
 
+## Що таке TransitionsGuard 
+
+**TransitionsGuardd** це тип функції, який дозволяє нам не дати перейти на інший стейт за якоїсь умови, наприклад за відсутності авторизації у користувача, або при умові невалідного івенту або стану. Це дає нам більш гнучко налаштовувати наші переходи між станами, та навіть при валідному правилі переходу не дати це зробити (перехід).
+
+### Type Definition
+
+```ts
+type TransitionGuardFn<Config extends FSMConfigI> = (
+    currentState?: Config['state'],
+    event?: Config['event'],
+) => boolean
+
+export default HttpRequestFSMConfigI;
+```
+
+### Use case
+
+```ts
+      success: {
+        transitionAction: (data: any, payload: any) =>
+            payload?.appliedData
+              ? { state: 'loaded', appliedData: payload.appliedData }
+              : data,
+        transitionGuard: () => doSomething(), // якась функція що повертає boolean 
+      },
+```
+
+---
+
+## Що таке options
+
+**options** це додаткові налаштування, які ми можемо опціонально вмикати/вимикати в нашому стейт менеджері, прокидуючи в конструктор обʼєкт з двома полями. Поле devMode та поле logTransition. За замовчуванням їх треба ставити false, якщо вам не треба логування, або попереджувальні логи.
+
+### Definition
+
+```ts
+  new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
+```
+---
+
+## Що таке transition
+
+**transition** це головний метод, який нам дозволяє робити всю магію, та використовуючи правила переходів перемикати стейти. Він робить декілька перевірок для того щоб зробити це коректно та не дасть перейти в стейт якщо івент який ми хочемо виконати не є валідним. Також ми можемо уввімкнути devMode та logMode і при використанні цього методу спостерігати за тим які стейти і як перемикаються.
+
+### Definition
+
+```ts
+  stateManager.transition('fetch');
+
+  stateManager.transition('success', ['data1', 'data2']);
+```
+---
+
+## Що таке canTransition
+
+**canTransition** це public функція самого стейт менеджеру яка перевіряє чи є можливість зробити перехід з поточного стану на той, який ми вкажемо в аргументі цієї функції.
+
+### Definition
+
+```ts
+  stateManager.canTransition('failure')
+```
+---
+
+## Що таке setStateData та GetStateData
+
+**setStateData** та **getStateData** це два методи які є сетером та геттером і дають можливість ініціалізувати поточний стан та отримати значення з поточного стану
+
+### Definition
+
+```ts
+  stateManager.setStateData({ state: 'init', appliedData: [] });
+
+  stateManager.getStateData(); // { state: 'init', appliedData: [] }
+```
+---
+
 ## 📦 Правила переходів для HTTP Requests
 
 Підсумуючи все вище зазначене, можна розглянути приклад правил переходу між станами для http запиту:
 
 ```ts
 const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
-  init: {
-    fetch: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
-  },
-  loading: {
-    success: (data, payload) =>
-      payload?.appliedData
-        ? { state: 'loaded', appliedData: payload.appliedData }
-        : data,
-    failure: (data, payload) =>
-      payload?.appliedData
-        ? { state: 'error', appliedData: payload.appliedData }
-        : data,
-  },
-  loaded: {
-    fetch: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
-  },
-  error: {
-    retry: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
-    fetch: () => ({
-      state: 'loading',
-      appliedData: [],
-    }),
-  },
+    init: {
+      fetch: {
+        transitionAction: () => ({
+            state: 'loading',
+            appliedData: [],
+        })
+      },
+    },
+    loading: {
+      success: {
+        transitionAction: (data: any, payload: any) =>
+            payload?.appliedData
+              ? { state: 'loaded', appliedData: payload.appliedData }
+              : data,
+        transitionGuard: () => doSomething(),
+      },
+      failure: {
+        transitionAction: (data: any, payload: any) =>
+            payload?.appliedData
+              ? { state: 'error', appliedData: payload.appliedData }
+              : data,
+      }
+    },
+    loaded: {
+      fetch: {
+        transitionAction: () => ({
+            state: 'loading',
+            appliedData: [],
+          }),
+      }
+    },
+    error: {
+      retry: {
+        transitionAction: () => ({
+            state: 'loading',
+            appliedData: [],
+          }),
+      }
+    },
 };
 ```
 
 Кожна функція повертає новий стан або поточний, якщо змін не відбулося. Це робить автомат передбачуваним, 
 який легко тестувати та багаторазово перевикористовувати код. 
+
+---
+
+## Приклад використання
+
+```ts
+type HttpRequestStateType = 'init' | 'loading' | 'loaded' | 'error';
+
+type HttpRequestEventType = 'fetch' | 'success' | 'failure' | 'retry';
+
+type TransitionHttpRequestStateFn<Config extends HttpRequestFSMConfigI> = (
+    data: Config['data'],
+    payload?: { appliedData?: Config['data'] } 
+  ) => Config['data'];
+
+interface HttpRequestFSMConfigI extends FSMConfigI{
+    state: HttpRequestStateType,
+    event: HttpRequestEventType,
+    rule: TransitionHttpRequestStateFn<HttpRequestFSMConfigI>, 
+    data: any
+}
+
+const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
+    init: {
+      fetch: {
+        transitionAction: () => ({
+            state: 'loading',
+            appliedData: [],
+        })
+      },
+    },
+    loading: {
+      success: {
+        transitionAction: (data: any, payload: any) =>
+            payload?.appliedData
+              ? { state: 'loaded', appliedData: payload.appliedData }
+              : data,
+        transitionGuard: () => doSomething(),
+      },
+      failure: {
+        transitionAction: (data: any, payload: any) =>
+            payload?.appliedData
+              ? { state: 'error', appliedData: payload.appliedData }
+              : data,
+      }
+    },
+    loaded: {
+      fetch: {
+        transitionAction: () => ({
+            state: 'loading',
+            appliedData: [],
+          }),
+      }
+    },
+    error: {
+      retry: {
+        transitionAction: () => ({
+            state: 'loading',
+            appliedData: [],
+          }),
+      }
+    },
+  };
+
+const doSomething = () => { return true }
+
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { devMode: true, logTransitions: true });
+
+stateManager.setStateData({ state: 'init', appliedData: [] });
+
+stateManager.transition('fetch'); //[FSM] Transition: 'init' state → 'loading' state triggered by 'fetch' event
+
+stateManager.transition('success', ['data1', 'data2']); //[FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
+
+console.log(stateManager.canTransition('failure')); //[FSM Warn] We can't transition to another state with event 'failure' from state 'loaded' (false in console.log)
+
+console.log(stateManager.getStateData().appliedData); // ['data1, 'data2']
+```
 
 ## 📝 License
 

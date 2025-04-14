@@ -41,8 +41,8 @@ export class StateManagerFSM<Config extends FSMConfigI> {
                     console.warn(`[FSM Warn] Wrong transition: event '${event}' for state '${stateData.state}'`);
                 }
         
-                if (typeof transition.action === 'function') {
-                    const newState = transition.action(stateData, { appliedData });
+                if (typeof transition.transitionAction === 'function') {
+                    const newState = transition.transitionAction(stateData, { appliedData });
                     if (this.options.logTransitions) {
                         console.log(`[FSM] Transition: '${stateData.state}' state → '${newState.state}' state triggered by '${event}' event`);
                     }
@@ -67,7 +67,7 @@ export class StateManagerFSM<Config extends FSMConfigI> {
             return false;
         }
 
-        return typeof transition.action === 'function';
+        return typeof transition.transitionAction === 'function';
     }
 
     private transitionAction(event: Config['event']): TransitionRule<Config> | undefined {
@@ -85,8 +85,8 @@ export class StateManagerFSM<Config extends FSMConfigI> {
         if(!transition){
             return true;
         } else {
-            return transition.guard 
-                ? transition.guard(this.stateData.state, event) 
+            return transition.transitionGuard 
+                ? transition.transitionGuard(this.stateData.state, event) 
                 : true;
         }
     }
