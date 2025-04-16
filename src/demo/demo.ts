@@ -62,14 +62,20 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
 
 const doSomething = () => { return true }
 
-const stateManager = new StateManagerFSM(HttpRequestTransitionRules);
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { 
+  devMode: true, 
+  logTransitions: true, 
+  cacheEnabled: true
+});
 
 stateManager.setStateData({ state: 'init', appliedData: [] });
 
 stateManager.transition('fetch'); //[FSM] Transition: 'init' state → 'loading' state triggered by 'fetch' event
 
-stateManager.transition('success', ['data1', 'data2']); //[FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
+stateManager.transition('success', ['data1', 'data2']);
 
-console.log(stateManager.canTransition('failure')); //[FSM Warn] We can't transition to another state with event 'failure' from state 'loaded' (false in console.log)
+stateManager.transition('fetch');
 
-console.log(stateManager.getStateData().appliedData); // ['data1, 'data2']
+stateManager.transition('success', ['data1', 'data2'])
+
+
