@@ -4,6 +4,7 @@
       "declaration": true,
       "target": "ES5",
       "module": "CommonJS",
+      "lib": ["ES2017", "DOM"],
       "strict": true,
       "esModuleInterop": true,
       "skipLibCheck": true
