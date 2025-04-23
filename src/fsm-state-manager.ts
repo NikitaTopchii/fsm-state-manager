@@ -6,7 +6,6 @@ import TransitionRulesType from "./types/transition-rules-type";
 interface FSMOptions {
     devMode?: boolean;
     logTransitions?: boolean;
-    cacheEnabled?: boolean;
 }
 
 export class StateManagerFSM<Config extends FSMConfigI> {

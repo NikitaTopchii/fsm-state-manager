@@ -60,12 +60,9 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
   };
 
-const cacheEnabled = false;  
-
 const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { 
   devMode: false, 
   logTransitions: false, 
-  cacheEnabled: cacheEnabled
 });
 
 stateManager.setStateData({ state: 'init', appliedData: [] })
@@ -91,9 +88,6 @@ function benchmarkTransition(event: HttpRequestFSMConfigI['event'], payload?: an
   const duration = end - start;
   logTransitionTime(event, duration);
 }
-
-console.log('CACHE ENABLED: ' + cacheEnabled);
-
 
 for(let i = 0; i < 1000; i++){
   setTimeout(() => {
