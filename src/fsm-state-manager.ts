@@ -10,7 +10,9 @@ interface FSMOptions {
 
 export class StateManagerFSM<Config extends FSMConfigI> {
     private stateData: StateDataI<Config> = { state: '' as Config['state'], appliedData: [] };
+
     private transitionRules: TransitionRulesType<Config>;
+
     private options: FSMOptions = { devMode: false, logTransitions: false, };
 
     constructor(transitionRules: TransitionRulesType<Config>, options: Partial<FSMOptions> = {}){

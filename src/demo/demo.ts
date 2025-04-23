@@ -33,7 +33,7 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
             payload?.appliedData
               ? { state: 'loaded', appliedData: payload.appliedData }
               : data,
-        transitionGuard: () => doSomething(),
+        transitionGuard: () => 1 + 1 === 2,
       },
       failure: {
         transitionAction: (data: any, payload: any) =>
@@ -60,16 +60,38 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
   };
 
-const doSomething = () => { return true }
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { 
+  devMode: false, 
+  logTransitions: false, 
+});
 
-const stateManager = new StateManagerFSM(HttpRequestTransitionRules);
+stateManager.setStateData({ state: 'init', appliedData: [] })
 
-stateManager.setStateData({ state: 'init', appliedData: [] });
+function logTransitionTime(event: string, time: number) {
+  const barLength = Math.round(time * 100);
+  let bar = '🟩'.repeat(barLength);
+  if(barLength > 4){
+    bar = '🟨'.repeat(barLength);
+  }
 
-stateManager.transition('fetch'); //[FSM] Transition: 'init' state → 'loading' state triggered by 'fetch' event
+  if(barLength > 7){
+    bar = '🟥'.repeat(barLength)
+  }
+  const paddedEvent = event.padEnd(10, ' ');
+  console.log(`[FSM 👀] ${paddedEvent} ${time.toFixed(10)}ms ${bar}`);
+}
 
-stateManager.transition('success', ['data1', 'data2']); //[FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
+function benchmarkTransition(event: HttpRequestFSMConfigI['event'], payload?: any[]) {
+  const start = performance.now();
+  stateManager.transition(event, payload);
+  const end = performance.now();
+  const duration = end - start;
+  logTransitionTime(event, duration);
+}
 
-console.log(stateManager.canTransition('failure')); //[FSM Warn] We can't transition to another state with event 'failure' from state 'loaded' (false in console.log)
-
-console.log(stateManager.getStateData().appliedData); // ['data1, 'data2']
+for(let i = 0; i < 1000; i++){
+  setTimeout(() => {
+    benchmarkTransition('fetch')
+    benchmarkTransition('success', ['data'])
+  }, i*100)
+}

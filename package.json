@@ -1,7 +1,7 @@
 {
     "name": "fsm-state-manager",
-    "version": "1.1.0",
-    "description": "A state transition manager using a finite state machine pattern",
+    "version": "1.1.1",
+    "description": "A Flow FSM using a finite state machine pattern",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "scripts": {
@@ -13,7 +13,11 @@
       "fsm",
       "state-transition"
     ],
-    "author": "Ваше ім'я",
+    "files": [
+      "dist",
+      "README.md"
+    ],
+    "author": "Nikita",
     "license": "MIT",
     "devDependencies": {
       "typescript": "^4.0.0"

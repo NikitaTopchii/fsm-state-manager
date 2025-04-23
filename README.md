@@ -280,6 +280,22 @@ console.log(stateManager.getStateData().appliedData);
 
 ---
 
+## Трішки про швидкість
+
+Переходи між стейтами відбуваються майже миттево, завдяки цьому ви можете швидше маніпулювати даними та UI вашого застосунку що буде утримувати користувачів залишатися разом з вами
+
+```ts
+2518.5655ms
+[FSM] Transition: 'init' state → 'loading' state triggered by 'fetch' event
+[FSM Benchmark] Transition for event 'fetch' took 0.1023ms
+[FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
+[FSM Benchmark] Transition for event 'success' took 0.0898ms
+[FSM] Transition: 'loaded' state → 'loading' state triggered by 'fetch' event
+[FSM Benchmark] Transition for event 'fetch' took 0.3693ms
+[FSM] Transition: 'loading' state → 'loaded' state triggered by 'success' event
+[FSM Benchmark] Transition for event 'success' took 0.0184ms
+```
+
 ## 🧠 Що таке стейт 
 
 Стейт у цій реалізації відображає поточний **стан** якоїсь дії яку виконує користувач. Це може бути або обробка http запиту, або стан в якому знаходиться фільтр відкритий користувачем.
