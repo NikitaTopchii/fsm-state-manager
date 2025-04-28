@@ -5,6 +5,12 @@
 
 ---
 
+# Latest Updates
+
+> v1.1.2 — State Subscriptions Added, Error Handling Improved, and Subscription Mode Toggle Introduced
+
+---
+
 ## 🌐 Table of Contents
 
 - [What is a State](#what-is-a-state)
@@ -187,6 +193,30 @@ stateManager.setStateData({ state: 'init', appliedData: [] });
 stateManager.getStateData(); // { state: 'init', appliedData: [] }
 ```
 
+---
+
+## Subscription on changing state
+
+You can subscribe to a specific state change and pass a function that will be triggered when the transition to the desired state occurs.
+This can be useful for displaying loading notifications, error messages, or any other scenarios — the only limit is your imagination.
+To subscribe, simply call the **subscribe** method on the state manager, passing two arguments: the first is the state you want to listen to, and the second is the callback function that should execute when the state changes.
+To unsubscribe, refer to the variable where you stored the subscription and call the **unsubscribe** method on it.
+
+This is optional with **subscriptionMode**.
+
+```ts
+const stateManager = new StateManagerFSM<Config>(transitionRules, { subscriptionMode: true })
+
+const subscribtion = stateManager.subscribe('loaded', () => {})
+
+benchmarkTransition('fetch');
+benchmarkTransition('success', ['data1', 'data2']);
+
+subscribtion.unsubscribe();
+
+benchmarkTransition('fetch');
+benchmarkTransition('success', ['data1', 'data2']);
+```
 ---
 
 ## 📦 Example of Transition Rules for HTTP Requests
@@ -510,6 +540,31 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
 
 Кожна функція повертає новий стан або поточний, якщо змін не відбулося. Це робить автомат передбачуваним, 
 який легко тестувати та багаторазово перевикористовувати код. 
+
+---
+
+## Підписки на зміну станів
+
+Ви можете підписатися на зміну конкретного стану й передати туди функцію, яка спрацює в момент переходу до потрібного вам стану.
+Це може бути корисно для відображення сповіщень під час завантаження, повідомлень про помилки або будь-яких інших сценаріїв — обмеження тільки у вашій уяві.
+Щоб підписатися, достатньо звернутися до стейт-менеджера та викликати метод **subscribe**, передавши в нього два аргументи: перший — це стан, на який потрібно реагувати, другий — функція-колбек, яка виконається під час зміни на цей стан.
+Щоб відписатися, зверніться до змінної у яку ви зберегли підписку та використайте метод **unsubscribe**.
+
+Це необовʼязковий фукнціонал, він вимкнений за замовчуванням, для його роботи треба в конструкторі дописати **subscriptionMode: true**
+
+```ts
+const stateManager = new StateManagerFSM<Config>(transitionRules, { subscriptionMode: true })
+
+const subscribtion = stateManager.subscribe('loaded', () => {})
+
+benchmarkTransition('fetch');
+benchmarkTransition('success', ['data1', 'data2']);
+
+subscribtion.unsubscribe();
+
+benchmarkTransition('fetch');
+benchmarkTransition('success', ['data1', 'data2']);
+```
 
 ---
 

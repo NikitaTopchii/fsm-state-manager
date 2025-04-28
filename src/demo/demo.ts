@@ -86,21 +86,12 @@ function benchmarkTransition(event: HttpRequestFSMConfigI['event'], payload?: an
   logTransitionTime(event, duration);
 }
 
-// const actionFirst = (stateData: any) => {
-//   console.log(`[FSM] State changed to '${stateData.state}' with data:`, stateData.appliedData);
-// }
-
-// const subscribtion = stateManager.subscribe('loaded', actionFirst)
-
-// const subscribtion_2 = stateManager.subscribe('loaded', (stateData) => {
-//   console.log('redirecting to another page...');
-// })
+const subscribtion = stateManager.subscribe('loaded', () => {})
 
 benchmarkTransition('fetch');
 benchmarkTransition('success', ['data1', 'data2']);
 
-// subscribtion.unsubscribe();
-// subscribtion_2.unsubscribe();
+subscribtion.unsubscribe();
 
-// benchmarkTransition('fetch');
-// benchmarkTransition('success', ['data1', 'data2']);
+benchmarkTransition('fetch');
+benchmarkTransition('success', ['data1', 'data2']);

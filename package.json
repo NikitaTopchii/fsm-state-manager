@@ -1,6 +1,6 @@
 {
     "name": "fsm-state-manager",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "description": "A Flow FSM using a finite state machine pattern",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
