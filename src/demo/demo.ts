@@ -1,3 +1,4 @@
+import { TransitionRulesBuilder } from "../features/transition-rules-builder";
 import { StateManagerFSM } from "../fsm-state-manager";
 import FSMConfigI from "../interfaces/fsm-config.i";
 import TransitionRulesType from "../types/transition-rules-type";
@@ -60,7 +61,7 @@ const HttpRequestTransitionRules: TransitionRulesType<HttpRequestFSMConfigI> = {
     },
   };
 
-const stateManager = new StateManagerFSM(HttpRequestTransitionRules);
+const stateManager = new StateManagerFSM(HttpRequestTransitionRules, { subscriptionMode: true });
 
 stateManager.setStateData({ state: 'init', appliedData: [] })
 
@@ -95,3 +96,43 @@ subscribtion.unsubscribe();
 
 benchmarkTransition('fetch');
 benchmarkTransition('success', ['data1', 'data2']);
+
+const builder = new TransitionRulesBuilder<HttpRequestFSMConfigI>();
+
+const rules = builder
+  .addTransitions('init', {
+    fetch: {
+      to: 'loading',
+    }
+  })
+  .addTransitions('loaded', {
+    fetch: {
+      to: 'loading',
+    }
+  })
+  .addTransitions('loading', {
+    success: {
+      to: 'loaded',
+    },
+    failure: {
+      to: 'error',
+    }
+  })
+  .addTransitions('error', {
+    retry: {
+      to: 'loading',
+    }
+  })
+  .build();
+
+const stateManager2 = new StateManagerFSM(rules, { subscriptionMode: true });
+
+stateManager2.setStateData({ state: 'init', appliedData: [] })
+
+console.log(stateManager2.getStateData());
+
+stateManager2.transition('fetch');
+stateManager2.transition('success', ['data1', 'data2']);
+
+console.log(stateManager2.getStateData());
+
